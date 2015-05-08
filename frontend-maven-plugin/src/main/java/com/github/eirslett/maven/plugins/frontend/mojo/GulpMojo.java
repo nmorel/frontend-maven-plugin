@@ -10,6 +10,7 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.codehaus.plexus.util.Scanner;
+import org.slf4j.LoggerFactory;
 import org.sonatype.plexus.build.incremental.BuildContext;
 
 import com.github.eirslett.maven.plugins.frontend.lib.FrontendPluginFactory;
@@ -59,6 +60,12 @@ public final class GulpMojo extends AbstractMojo {
     @Parameter(property = "skip.gulp", defaultValue = "false")
     private Boolean skip;
 
+    /**
+     * Whether you should continue build when an error occur (default is false)
+     */
+    @Parameter(property = "failureIgnore", required = false, defaultValue = "false")
+    private Boolean failureIgnore;
+
     @Component
     private BuildContext buildContext;
 
@@ -68,7 +75,12 @@ public final class GulpMojo extends AbstractMojo {
             try {
                 new FrontendPluginFactory(workingDirectory).getGulpRunner().execute(arguments);
             } catch (TaskRunnerException e) {
-                throw new MojoFailureException("Failed to run task", e);
+                if (failureIgnore) {
+                    LoggerFactory.getLogger(GulpMojo.class).warn("Build failure is ignored");
+                }
+                else {
+                    throw new MojoFailureException("Failed to run task", e);
+                }
             }
 
             if (outputdir != null) {
